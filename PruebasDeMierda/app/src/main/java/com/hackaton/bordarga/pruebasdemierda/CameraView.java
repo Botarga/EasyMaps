@@ -1,10 +1,7 @@
-package com.hackaton.bordarga.easymaps;
-
-/**
- * Created by botarga on 12/11/2017.
- */
+package com.hackaton.bordarga.pruebasdemierda;
 
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.util.Log;
 import android.view.SurfaceHolder;
@@ -12,12 +9,16 @@ import android.view.SurfaceView;
 
 import java.io.IOException;
 
-/** A basic Camera preview class */
-public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
+/**
+ * Created by botarga on 13/11/2017.
+ */
+
+public class CameraView extends SurfaceView implements SurfaceHolder.Callback {
     private SurfaceHolder mHolder;
     private Camera mCamera;
+    private final String TAG = "hasfl";
 
-    public CameraPreview(Context context, Camera camera) {
+    public CameraView(Context context, Camera camera) {
         super(context);
         mCamera = camera;
 
@@ -35,7 +36,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             mCamera.setPreviewDisplay(holder);
             mCamera.startPreview();
         } catch (IOException e) {
-            Log.d("CAMERA_ERROR", "Error setting camera preview: " + e.getMessage());
+            Log.d(TAG, "Error setting camera preview: " + e.getMessage());
         }
     }
 
@@ -59,7 +60,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             // ignore: tried to stop a non-existent preview
         }
 
-        // set preview size and make any resize, rotate orbvb
+        // set preview size and make any resize, rotate or
         // reformatting changes here
 
         // start preview with new settings
@@ -68,7 +69,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             mCamera.startPreview();
 
         } catch (Exception e){
-            Log.d("CAMERA_ERROR", "Error starting camera preview: " + e.getMessage());
+            Log.d(TAG, "Error starting camera preview: " + e.getMessage());
         }
     }
 }
