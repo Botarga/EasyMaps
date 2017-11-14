@@ -101,7 +101,7 @@ class Renderer2 implements GLSurfaceView.Renderer {
     }
 
     public void applyLongitudeDisplacemente(double delta){
-        for(Arrow a : arrows){
+         for(Arrow a : arrows){
             a.zCord += delta;
         }
     }

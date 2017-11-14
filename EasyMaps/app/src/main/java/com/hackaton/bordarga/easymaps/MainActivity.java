@@ -144,8 +144,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
     private void enableLocationUpdates() {
 
         locRequest = new LocationRequest();
-        locRequest.setInterval(10);
-        locRequest.setFastestInterval(10);
+        locRequest.setInterval(0);
+        locRequest.setFastestInterval(0);
         locRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
         LocationSettingsRequest locSettingsRequest =
@@ -301,14 +301,16 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
     private void updatePath(Location location){
         double result =  getDistance(userLocation.getLatitude(), userLocation.getLongitude(), searchLat, searchLon);
 
-        double deltaLat = Math.abs(userLocation.getLatitude() - lastLocation.getLatitude());
+        double deltaLat = userLocation.getLatitude() - lastLocation.getLatitude();
         double deltaLon = Math.abs(userLocation.getLongitude() - lastLocation.getLongitude());
 
-        deltaLat *= Math.pow(10, 7);
-        deltaLon *= Math.pow(10, 7);
+        deltaLat *= Math.pow(10, 5);
+        deltaLon *= Math.pow(10, 4);
 
-        renderer.applyLatitudeDisplacement(deltaLat * -1);
-        renderer.applyLongitudeDisplacemente(deltaLon * -1);
+        logText.setText(logText.getText() + " deltaLat: " + deltaLat);
+
+        renderer.applyLatitudeDisplacement(deltaLat);
+        //renderer.applyLongitudeDisplacemente(deltaLon);
     }
 
     private double getDistance(double la1, double lo1, double la2, double lo2){
