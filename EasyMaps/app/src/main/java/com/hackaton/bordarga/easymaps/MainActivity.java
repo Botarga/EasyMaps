@@ -19,6 +19,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Display;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
@@ -68,8 +69,11 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
     double searchLat  = 40.514109;
     double searchLon = -3.664977;
 
-    SensorManager sensorManager;
-    private Sensor acelerometro;
+    SensorManager mSensorManager;
+    private Sensor mSensorGyr;
+    private boolean firstCamera = true;
+
+
 
     private Renderer2 renderer;
 
@@ -100,8 +104,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         renderer.addArrow(0.0f, -1.0f);
         glView.setRenderer(renderer);
 
-
-       /* if (checkCameraHardware(getApplicationContext())) {
+/*
+        if (checkCameraHardware(getApplicationContext())) {
             mCamera = getCameraInstance();
             mPreview = new CameraPreview(this, mCamera);
             FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
@@ -120,8 +124,18 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
 
 
 
-        sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-        acelerometro = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        mSensorManager.registerListener(this,
+                mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
+                SensorManager.SENSOR_DELAY_NORMAL);
+
+        mSensorManager.registerListener(this,
+                mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR),
+                SensorManager.SENSOR_DELAY_NORMAL);
+
+        mSensorManager.registerListener(this,
+                mSensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY),
+                SensorManager.SENSOR_DELAY_NORMAL);
 
 
     }
@@ -290,7 +304,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
             lastLocation = userLocation;
             userLocation = location;
 
-            logText.setText("Latitud: " + userLocation.getLatitude() + "  Longitud:" + userLocation.getLongitude());
+            //logText.setText("Latitud: " + userLocation.getLatitude() + "  Longitud:" + userLocation.getLongitude());
         }
 
         //Mostramos la nueva ubicación recibida
@@ -304,12 +318,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         double deltaLat = userLocation.getLatitude() - lastLocation.getLatitude();
         double deltaLon = userLocation.getLongitude() - lastLocation.getLongitude();
 
-        deltaLat *= Math.pow(10, 5);
+        deltaLat = Math.pow(10, 5);
         deltaLon *= Math.pow(10, 5);
 
 
-        renderer.applyLatitudeDisplacement(deltaLat);
-        renderer.applyLongitudeDisplacemente(deltaLon);
+        //renderer.applyLatitudeDisplacement(deltaLat);
+        //renderer.applyLongitudeDisplacemente(deltaLon);
     }
 
     private double getDistance(double la1, double lo1, double la2, double lo2){
@@ -320,16 +334,108 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         return 12742 * Math.asin(Math.sqrt(a)) * 1000;
     }
 
+    // Metodo que escucha el cambio de los sensores
     @Override
     public void onSensorChanged(SensorEvent event) {
-        float x,y,z;
-        x = event.values[0];
-        y = event.values[1];
-        z = event.values[2];
+        String txt = "\n\nSensor: ";
 
-        Log.d("posicion", "xCord: " + x  + " y: " + y + " zCord: " + z);
+        // Cada sensor puede lanzar un thread que pase por aqui
+        // Para asegurarnos ante los accesos simult‡neos sincronizamos esto
+
+        synchronized (this) {
+
+            switch (event.sensor.getType()) {
+
+                case Sensor.TYPE_ACCELEROMETER:
+
+                    txt += "acelerometro\n";
+                    txt += "\n x: " + event.values[0] + " m/s";
+                    txt += "\n y: " + event.values[1] + " m/s";
+                    txt += "\n z: " + event.values[2] + " m/s";
+                    //acelerometro.setText(txt);
+
+
+
+            break;
+
+            case Sensor.TYPE_ROTATION_VECTOR:
+                float x = event.values[0];
+                float y = event.values[1];
+                float z = event.values[2];
+
+                if (firstCamera)
+                {
+                    renderer.setLastX(x);
+                    renderer.setLastY(y);
+                    firstCamera = false;
+                }
+
+
+                float xoffset = x - renderer.getLastX();
+                float yoffset = renderer.getLastY() - y; // reversed since y-coordinates go from bottom to top
+                renderer.setLastX(x);
+                renderer.setLastY(y);
+
+                float sensitivity = 0.1f; // change this value to your liking
+                xoffset *= sensitivity;
+                yoffset *= sensitivity;
+
+                renderer.setYaw(renderer.getYaw() + xoffset);
+                renderer.setPitch(renderer.getPitch() + yoffset);
+
+                // make sure that when pitch is out of bounds, screen doesn't get flipped
+                if (renderer.getPitch() > 89.0f)
+                    renderer.setPitch(89.0f);
+                if (renderer.getPitch() < -89.0f)
+                    renderer.setPitch(-89.0f);
+
+                float[] front = new float[3];
+                front[0] = (float) (Math.cos(Math.toRadians(renderer.getYaw())) * Math.cos(Math.toRadians(renderer.getPitch())));
+                front[1] = (float) Math.sin(Math.toRadians(renderer.getPitch()));
+                front[2] = (float) (Math.sin(Math.toRadians(renderer.getYaw())) * Math.cos(Math.toRadians(renderer.getPitch())));
+
+                float[] cameraFront = new float[3];
+
+                float length = (float) Math.sqrt(front[0] * front[0] + front[1] * front[1] + front[2] * front[2]);
+                if(length > 0){
+                    cameraFront[0] = front[0] / length;
+                    cameraFront[1] = front[1] / length;
+                    cameraFront[2] = front[2] / length;
+                }
+
+                renderer.setCameraFront(cameraFront[0], cameraFront[1], cameraFront[2]);
+
+                break;
+
+            case Sensor.TYPE_GRAVITY:
+                txt += "Gravedad\n";
+                txt += "\n x: " + event.values[0];
+                txt += "\n y: " + event.values[1];
+                txt += "\n z: " + event.values[2];
+
+
+                break;
+
+        }
     }
+}
+/*
+    private void detectRotation(SensorEvent event) {
+        long now = System.currentTimeMillis();
 
+        if ((now - mRotationTime) > ROTATION_WAIT_TIME_MS) {
+            mRotationTime = now;
+
+            // Change background color if rate of rotation around any
+            // axis and in any direction exceeds threshold;
+            // otherwise, reset the color
+            if (Math.abs(event.values[0]) > ROTATION_THRESHOLD ||
+                    Math.abs(event.values[1]) > ROTATION_THRESHOLD ||
+                    Math.abs(event.values[2]) > ROTATION_THRESHOLD) {
+                soundGyro.start();
+            }
+        }
+    } */
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
 
@@ -338,12 +444,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
     @Override
     protected void onResume() {
         super.onResume();
-        sensorManager.registerListener(this, acelerometro, SensorManager.SENSOR_DELAY_NORMAL);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        sensorManager.unregisterListener(this);
     }
 }

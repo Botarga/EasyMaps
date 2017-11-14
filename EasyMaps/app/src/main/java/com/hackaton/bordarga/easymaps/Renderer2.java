@@ -20,6 +20,18 @@ class Renderer2 implements GLSurfaceView.Renderer {
 
     float[] lightPos = new float[]{1.2f, 1.0f, 2.0f};
 
+    float[] cameraPos   = new float[]{0.0f, 2.0f, 3.0f};
+    float[] cameraFront = new float[]{0.0f, 0.0f, -1.0f};
+    float[] cameraUp    = new float[]{0.0f, 1.0f, 0.0f};
+
+    float yaw   = -90.0f;	// yaw is initialized to -90.0 degrees since a yaw of 0.0 results in a direction vector pointing to the right so we initially rotate a bit to the left.
+    float pitch =  0.0f;
+    float lastX;
+    float lastY;
+    float fov   =  45.0f;
+
+
+
     @Override
     public void onSurfaceCreated(GL10 gl, EGLConfig config) {
         GLES20.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -36,6 +48,9 @@ class Renderer2 implements GLSurfaceView.Renderer {
     @Override
     public void onSurfaceChanged(GL10 glUnused, int width, int height)
     {
+        lastX = width / 2.0f;
+        lastY = height / 2.0f;
+
         // Set the OpenGL viewport to the same size as the surface.
         GLES20.glViewport(0, 0, width, height);
 
@@ -63,10 +78,11 @@ class Renderer2 implements GLSurfaceView.Renderer {
 
 
 
-        Matrix.setLookAtM(viewMatrix, 0,
-                0, 3, 3.0f,
-                0, 0, 0,
-                0, 1.0f, 0.0f);
+       Matrix.setLookAtM(viewMatrix, 0,
+                cameraPos[0], cameraPos[1], cameraPos[2],
+                cameraPos[0] + cameraFront[0], cameraPos[1] + cameraFront[1], cameraPos[2] + cameraFront[2],
+                cameraUp[0], cameraUp[1], cameraUp[2]);
+
 
 
 
@@ -92,6 +108,44 @@ class Renderer2 implements GLSurfaceView.Renderer {
         }
 
 
+    }
+
+    public void setLastX(float x){
+        lastX =  x;
+    }
+
+    public void setLastY(float y){
+        lastY = y;
+    }
+
+    public float getLastX(){
+        return lastX;
+    }
+
+    public float getLastY(){
+        return lastY;
+    }
+
+    public float getYaw() {
+        return yaw;
+    }
+
+    public void setYaw(float yaw) {
+        this.yaw = yaw;
+    }
+
+    public float getPitch() {
+        return pitch;
+    }
+
+    public void setPitch(float pitch) {
+        this.pitch = pitch;
+    }
+
+    public void setCameraFront(float x, float y, float z){
+        cameraFront[0] = x;
+        cameraFront[1] = y;
+        cameraFront[2] = z;
     }
 
     public void applyLatitudeDisplacement(double delta){
