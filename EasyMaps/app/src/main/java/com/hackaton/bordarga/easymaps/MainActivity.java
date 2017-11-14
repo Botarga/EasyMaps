@@ -302,15 +302,14 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         double result =  getDistance(userLocation.getLatitude(), userLocation.getLongitude(), searchLat, searchLon);
 
         double deltaLat = userLocation.getLatitude() - lastLocation.getLatitude();
-        double deltaLon = Math.abs(userLocation.getLongitude() - lastLocation.getLongitude());
+        double deltaLon = userLocation.getLongitude() - lastLocation.getLongitude();
 
         deltaLat *= Math.pow(10, 5);
-        deltaLon *= Math.pow(10, 4);
+        deltaLon *= Math.pow(10, 5);
 
-        logText.setText(logText.getText() + " deltaLat: " + deltaLat);
 
         renderer.applyLatitudeDisplacement(deltaLat);
-        //renderer.applyLongitudeDisplacemente(deltaLon);
+        renderer.applyLongitudeDisplacemente(deltaLon);
     }
 
     private double getDistance(double la1, double lo1, double la2, double lo2){
