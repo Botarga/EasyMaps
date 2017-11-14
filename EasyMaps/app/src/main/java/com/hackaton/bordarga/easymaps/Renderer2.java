@@ -3,7 +3,8 @@ package com.hackaton.bordarga.easymaps;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
-import android.os.SystemClock;
+
+import java.util.ArrayList;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -13,72 +14,95 @@ import javax.microedition.khronos.opengles.GL10;
  */
 
 class Renderer2 implements GLSurfaceView.Renderer {
-    private Triangle mTriangle;
 
-    private final float[] mMVPMatrix = new float[16];
-    private final float[] mProjectionMatrix = new float[16];
-    private final float[] mViewMatrix = new float[16];
+    ArrayList<Arrow> arrows = new ArrayList<>();
+    float[] projectionMatrix = new float[16];
 
-    private float[] mRotationMatrix = new float[16];
+    float[] lightPos = new float[]{1.2f, 1.0f, 2.0f};
 
     @Override
     public void onSurfaceCreated(GL10 gl, EGLConfig config) {
         GLES20.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-        GLES20.glEnable(GLES20.GL_DEPTH_BUFFER_BIT);
-        mTriangle = new Triangle();
+        GLES20.glEnable(GLES20.GL_DEPTH_TEST);
+
+        //arrows.add(new Arrow(0.0f, 3.0f));
+    }
+
+
+    public void addArrow(float x, float z){
+        arrows.add(new Arrow(x, z));
     }
 
     @Override
-    public void onSurfaceChanged(GL10 gl, int width, int height) {
+    public void onSurfaceChanged(GL10 glUnused, int width, int height)
+    {
+        // Set the OpenGL viewport to the same size as the surface.
         GLES20.glViewport(0, 0, width, height);
 
-        float ratio = (float) width / height;
+        // Create a new perspective projection matrix. The height will stay the same
+        // while the width will vary as per aspect ratio.
+        final float ratio = (float) width / height;
+        final float left = -ratio;
+        final float right = ratio;
+        final float bottom = -1.0f;
+        final float top = 1.0f;
+        final float near = 1.0f;
+        final float far = 10.0f;
 
-        // this projection matrix is applied to object coordinates
-        // in the onDrawFrame() method
-        Matrix.frustumM(mProjectionMatrix, 0, -ratio, ratio, -1, 1, 3, 7);
+        Matrix.frustumM(projectionMatrix, 0, left, right, bottom, top, near, far);
     }
 
     @Override
     public void onDrawFrame(GL10 gl) {
-        float[] scratch = new float[16];
-// This method is called per frame, as the name suggests.
-        // For demonstration purposes, I simply clear the screen with a random translucent gray.
-        //float c = 1.0f / 256 * ( System.currentTimeMillis() % 256 );
-        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
+        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT |GLES20.GL_DEPTH_BUFFER_BIT);
 
 
-        // Set the camera position (View matrix)
+        float[] viewMatrix = new float[16];
 
-        Matrix.setLookAtM(mViewMatrix, 0, 0, 0, -3, 0f, 0f, 0f, 0f, 1.0f, 0.0f);
+        float[] productMatrix = new float[16];
 
-        // Create a rotation transformation for the triangle
-        long time = SystemClock.uptimeMillis() % 4000L;
-        float angle = 0.090f * ((int) time);
-        Matrix.setRotateM(mRotationMatrix, 0, angle, 0, 0, -1.0f);
 
-        // Calculate the projection and view transformation
-        Matrix.multiplyMM(mMVPMatrix, 0, mProjectionMatrix, 0, mViewMatrix, 0);
 
-        // Combine the rotation matrix with the projection and camera view
-        // Note that the mMVPMatrix factor *must be first* in order
-        // for the matrix multiplication product to be correct.
-        Matrix.multiplyMM(scratch, 0, mMVPMatrix, 0, mRotationMatrix, 0);
+        Matrix.setLookAtM(viewMatrix, 0,
+                0, 3, 3.0f,
+                0, 0, 0,
+                0, 1.0f, 0.0f);
 
-        mTriangle.draw(scratch  );
+
+
+        for(Arrow a : arrows) {
+            if(!a.initialized)
+                a.init();
+
+            Matrix.multiplyMM(productMatrix, 0,
+                    projectionMatrix, 0,
+                    viewMatrix, 0);
+
+            float[] scratch = new float[16];
+            Matrix.setIdentityM(scratch, 0);
+            Matrix.translateM(scratch, 0, a.xCord, 0.0f, a.zCord);
+
+
+            Matrix.multiplyMM(productMatrix, 0, productMatrix, 0, scratch, 0);
+
+            int matrix = GLES20.glGetUniformLocation(a.program, "matrix");
+            GLES20.glUniformMatrix4fv(matrix, 1, false, productMatrix, 0);
+
+            a.draw();
+        }
+
 
     }
 
-    public static int loadShader(int type, String shaderCode){
+    public void applyLatitudeDisplacement(double delta){
+        for(Arrow a : arrows){
+            a.xCord += delta;
+        }
+    }
 
-        // create a vertex shader type (GLES20.GL_VERTEX_SHADER)
-        // or a fragment shader type (GLES20.GL_FRAGMENT_SHADER)
-        int shader = GLES20.glCreateShader(type);
-
-        // add the source code to the shader and compile it
-        GLES20.glShaderSource(shader, shaderCode);
-        GLES20.glCompileShader(shader);
-
-        return shader;
+    public void applyLongitudeDisplacemente(double delta){
+        for(Arrow a : arrows){
+            a.zCord += delta;
+        }
     }
 }
